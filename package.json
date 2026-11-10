@@ -1,0 +1,11 @@
+{
+  "name": "kut-101-king",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Küt Okey, 101 Okey ve King için Türkçe kural rehberi ve skor defteri",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node --test test/*.test.js"
+  }
+}
