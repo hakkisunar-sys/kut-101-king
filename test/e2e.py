@@ -174,6 +174,37 @@ with sync_playwright() as p:
     check('Düzeltme toplamı değiştirdi', totals(page)[0] == '3')
     act(page, 'back')
 
+    # 4b · Eşli 101
+    setup(page, 'okey101')
+    chip(page, 'Eşli')
+    chip(page, '3')
+    check('Eşli kurulumda takım açıklaması', '1 ile 3' in page.inner_text('main') and 'Ali & Can' in page.inner_text('#profileSummary'))
+    shot(page, '15-esli-kurulum')
+    act(page, 'startMatch')
+    check('Eşli aktif elde takım toplamları', page.locator('.teams .tcell').count() == 2)
+    act(page, 'enter')
+    chip(page, 'Normal bitiş')
+    chip(page, 'Ayşe')
+    check('Bitirenin eşi "eşi bitirdi"', 'eşi bitirdi' in page.locator('.pblock', has_text='Deniz').text_content())
+    page.locator('.pblock', has_text='Ali').locator('.chip', has_text='Seri açtı').click()
+    fill(page, 'players.0.T', '17')
+    page.locator('.pblock', has_text='Can').locator('.chip', has_text='Çift açtı').click()
+    fill(page, 'players.2.T', '8')
+    act(page, 'preview')
+    shot(page, '16-esli-onizleme')
+    page.locator('#saveBtn:not([disabled])').click()
+    check('Eşli: oyuncu puanları 17, −101, 16, 0', totals(page) == ['17', '-101', '16', '0'])
+    team = [t.inner_text().replace('−', '-').replace('+', '') for t in page.locator('.teams .pts').all()]
+    check('Eşli: takım toplamları 33 ve −101', team == ['33', '-101'])
+    for _ in range(2):
+        act(page, 'enter')
+        chip(page, 'Elden')
+        chip(page, 'Ali')
+        preview_save(page)
+    check('Eşli maç sonu takım sıralaması', 'Kazanan: Ali & Can' in page.inner_text('.podium'))
+    shot(page, '17-esli-mac-sonu')
+    act(page, 'home')
+
     # 5 · King
     setup(page, 'king')
     act(page, 'startMatch')

@@ -189,3 +189,27 @@ test('Negatif, sıfır, pozitif toplamlar doğru taşınır', () => {
   const t = totals([{ scores: [-101, 0, 17, 202] }, { scores: [5, -202, 0, 0] }]);
   assert.deepEqual(t, [-96, -202, 17, 202]);
 });
+
+// ------------------------------------------------------------ EŞLİ 101
+import { teamTotals } from '../src/engines.js';
+const T = { penalized: true, teams: true };
+
+test('Eşli 101: bitirenin eşi 0, açmamış olsa bile', () => {
+  const r = score101({
+    finish: 'normal', winner: 1,
+    players: [{ state: 'seri', T: 17 }, {}, { state: 'cift', T: 8 }, { state: 'acmadi' }],
+  }, T);
+  assert.deepEqual(r.scores, [17, -101, 16, 0]);
+  assert.match(r.breakdown[3], /Eşi bitirdi/);
+  assert.deepEqual(teamTotals(r.scores), [33, -101]);
+});
+
+test('Eşli 101: elden bitişte eş 0, rakipler sabit; olay cezası eşe de yazılır', () => {
+  const r = score101({ finish: 'elden_okey', winner: 0, players: [{}, {}, { events: 1 }, {}] }, T);
+  assert.deepEqual(r.scores, [-404, 808, 101, 808]);
+});
+
+test('Eşli 101: deste bittiğinde herkes kendi cezasını yazar', () => {
+  const r = score101({ finish: 'deste', winner: 0, players: [{ state: 'acmadi' }, { state: 'seri', T: 5 }, { state: 'acmadi' }, { state: 'cift', T: 5 }] }, T);
+  assert.deepEqual(r.scores, [202, 5, 202, 10]);
+});

@@ -184,3 +184,12 @@ table.grid { width: 100%; border-collapse: collapse; font-size: .92rem; }
   .wrap { padding-top: 20px; }
   .tile { width: 38px; height: 52px; }
 }
+
+/* Eşli 101 */
+.teams { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+.tcell.team { border-left: 5px solid var(--M); }
+.tcell.team.t1 { border-left-color: var(--K); }
+.tcell.team .nm { color: var(--ink); font-weight: 600; }
+.seat.team.t0 { background: var(--M); }
+.seat.team.t1 { background: var(--K); }
+.score .teamrow th, .score .teamrow td { border-top: 0; font-size: .92rem; }

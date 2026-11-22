@@ -3,7 +3,7 @@
 
 import {
   scoreManual, scoreKutAuto, score101, scoreKing, kutIsManualHand, kingSequenceError,
-  kingChoiceError, okey101Finish, totals,
+  kingChoiceError, okey101Finish, totals, teamTotals,
 } from './engines.js';
 import { KING_CONTRACTS, KING_SUITS, KING_LIMITS } from './rules.js';
 
@@ -32,6 +32,9 @@ export const isDone = (m) => m.hands.length >= targetHands(m);
 export const names = (m) => m.players.map((p) => p.name);
 export const lowWins = (m) => (m.game === 'king' ? false : m.config.lowWins !== false);
 export const matchTotals = (m) => totals(m.hands, m.players.length);
+export const isTeams = (m) => m.game === 'okey101' && !!m.config.teams;
+export const teamNames = (m) => [`${m.players[0].name} & ${m.players[2].name}`, `${m.players[1].name} & ${m.players[3].name}`];
+export const matchTeamTotals = (m) => teamTotals(matchTotals(m));
 
 /** Bu el serbest puan girişiyle mi? (yalnız Küt) */
 export function isManualEntry(m, handNo) {

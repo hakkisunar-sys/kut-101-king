@@ -31,6 +31,12 @@ export function totals(hands, n = N) {
   return sum;
 }
 
+/** Eşli oyunda takım toplamları: 1–3 ve 2–4 (karşılıklı oturanlar). */
+export function teamTotals(tot) {
+  return [tot[0] + tot[2], tot[1] + tot[3]];
+}
+export const partnerOf = (i) => (i + 2) % N;
+
 /** Eşit puana ortak sıra verir. lowWins=true ise düşük toplam önde. */
 export function ranking(tot, lowWins) {
   const order = tot.map((score, i) => ({ i, score }))
@@ -120,7 +126,8 @@ export function okey101Finish(id) { return OKEY101_FINISHES.find((f) => f.id ===
 
 /**
  * input: { finish, winner, players: [{ state: 'acmadi'|'seri'|'cift', T, okeys, events }] }
- * profile: { penalized: boolean }
+ * profile: { penalized: boolean, teams: boolean }
+ * Eşli oyunda bitirenin eşi 0 yazar (ceza olayları hariç).
  */
 export function score101(input, profile, names = []) {
   const errors = [];
@@ -147,6 +154,11 @@ export function score101(input, profile, names = []) {
     if (i === winner) {
       scores.push(f.winner + evPts);
       breakdown.push(`${f.label}, bitirdi: ${f.winner}${evTxt}`);
+      continue;
+    }
+    if (profile.teams && winner !== null && i === partnerOf(winner)) {
+      scores.push(evPts);
+      breakdown.push(`Eşi bitirdi: 0${evTxt}`);
       continue;
     }
     if (f.fixed) {

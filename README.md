@@ -15,7 +15,7 @@ Masada gerçek taşlarla ve kartlarla oynanan **Küt Okey**, **101 Okey** ve **K
 | Oyun | Profil |
 |---|---|
 | Küt Okey | 13 el. Elle skor her elde çalışır. **Masa ayarıyla** modu onaylanınca otomatik hesap yapar: bitiren 0, açamayan 100, açıp bitiremeyen elde kalan taş toplamı, okeyle bitişte rakipler ×2, deste bittiğinde çarpan yok. 10. el (*cezasız*) ve 13. el (*düz okey*) her zaman serbest puanla girilir. Düşük toplam kazanır. |
-| 101 Okey | Katlamasız, bireysel. El sayısı maç başında seçilir. Normal, okeyle, çiftle, çift + okey, elden, elden + okey ve deste bitti sonuçları. Cezalı masada kalan her gerçek okey ve her ceza olayı +101. Düşük toplam kazanır. |
+| 101 Okey | Katlamasız; **bireysel** veya **eşli**. Eşlide karşılıklı oturanlar (1–3, 2–4) takımdır: bitirenin eşi 0 yazar, maç sonunda takım toplamı düşük olan kazanır. El sayısı maç başında seçilir. Normal, okeyle, çiftle, çift + okey, elden, elden + okey ve deste bitti sonuçları. Cezalı masada kalan her gerçek okey ve her ceza olayı +101. Düşük toplam kazanır. |
 | King | 20 kontrat. Her oyuncu 3 ceza ve 2 koz seçer, her ceza türü 2 kez oynanır. Birim toplamı tutmayan kontrat kaydedilmez. Tam maçta toplam 0. Yüksek toplam kazanır. |
 
 ## Yerelde çalıştırma

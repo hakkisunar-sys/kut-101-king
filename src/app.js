@@ -6,11 +6,11 @@ import {
 } from './rules.js';
 import { GUIDES } from './guides.js';
 import {
-  fmt, ranking, kingChooser, kingRights, kingChoiceError, parseIntStrict,
+  fmt, ranking, kingChooser, kingRights, kingChoiceError, parseIntStrict, partnerOf,
 } from './engines.js';
 import {
   createMatch, targetHands, isDone, names, lowWins, matchTotals, isManualEntry, computeHand,
-  appendHand, replaceHand, undoLast, uid,
+  appendHand, replaceHand, undoLast, uid, isTeams, teamNames, matchTeamTotals,
 } from './model.js';
 import { loadState, saveState } from './store.js';
 
@@ -145,7 +145,11 @@ function viewHistoryList() {
   const rows = list.map((m) => {
     const tot = matchTotals(m);
     const rk = ranking(tot, lowWins(m));
-    const lead = m.hands.length ? `${esc(m.players[rk[0].player].name)} ${fmt(rk[0].score)}` : 'Kayıt yok';
+    let lead = m.hands.length ? `${esc(m.players[rk[0].player].name)} ${fmt(rk[0].score)}` : 'Kayıt yok';
+    if (isTeams(m) && m.hands.length) {
+      const trk = ranking(matchTeamTotals(m), true);
+      lead = `${esc(teamNames(m)[trk[0].player])} ${fmt(trk[0].score)}`;
+    }
     const st = m.status === 'done' ? 'Bitti' : S.active[g.id] === m.id ? 'Devam ediyor' : 'Yarım kaldı';
     return `<button type="button" class="card listrow" data-act="openMatch" data-id="${m.id}">
       <b>${dateTR(m.createdAt)}</b> <span class="badge">${st}</span>
@@ -213,6 +217,7 @@ function startSetup(game) {
     handCount: 7,
     customCount: '',
     penalized: true,
+    teams: false,
     firstChooser: 0,
   };
   go({ name: 'setup' });
@@ -224,14 +229,14 @@ function profileSummary(su) {
       ? `13 el · masa ayarıyla otomatik hesap (bitiren ${su.table.finisherScore}, açamayan ${su.table.notOpenedPenalty}, açan kalan taş toplamı, okeyle ×${su.table.okeyMultiplier}). 10. ve 13. el serbest giriş. ${su.lowWins ? 'Düşük' : 'Yüksek'} toplam kazanır.`
       : `13 el · her elde elle puan girişi. ${su.lowWins ? 'Düşük' : 'Yüksek'} toplam kazanır.`;
   }
-  if (su.game === 'okey101') return `Katlamasız, bireysel · ${su.handCount} el · ${su.penalized ? 'cezalı masa (okey ve olay başına +101)' : 'cezasız masa'} · düşük toplam kazanır.`;
+  if (su.game === 'okey101') return `Katlamasız, ${su.teams ? `eşli (${esc(su.names[0] || 'Oyuncu 1')} & ${esc(su.names[2] || 'Oyuncu 3')} – ${esc(su.names[1] || 'Oyuncu 2')} & ${esc(su.names[3] || 'Oyuncu 4')}), bitirenin eşi 0 yazar` : 'bireysel'} · ${su.customCount || su.handCount} el · ${su.penalized ? 'cezalı masa (okey ve olay başına +101)' : 'cezasız masa'} · düşük toplam kazanır.`;
   return `20 kontrat · her oyuncu 3 ceza + 2 koz · ilk seçici ${esc(su.names[su.firstChooser] || `Oyuncu ${su.firstChooser + 1}`)} · yüksek toplam kazanır.`;
 }
 
 function viewSetup() {
   const su = S.setup; const g = GAMES[su.game];
   const nameRows = su.names.map((n, i) => `<div class="pname">
-    <span class="seat">${i + 1}</span>
+    <span class="seat ${su.game === 'okey101' && su.teams ? `team t${i % 2}` : ''}">${i + 1}</span>
     <input type="text" data-sf="names.${i}" value="${esc(n)}" placeholder="Oyuncu ${i + 1}" maxlength="16" aria-label="${i + 1}. oyuncu adı" autocomplete="off">
     <button type="button" class="mini" data-act="moveUp" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Yukarı taşı">↑</button>
     <button type="button" class="mini" data-act="moveDown" data-i="${i}" ${i === 3 ? 'disabled' : ''} aria-label="Aşağı taşı">↓</button>
@@ -252,7 +257,11 @@ function viewSetup() {
       <div class="chips">${chip('Düşük toplam', su.lowWins, 'data-act="su" data-k="lowWins" data-v="1"')}${chip('Yüksek toplam', !su.lowWins, 'data-act="su" data-k="lowWins" data-v="0"')}</div>
     </section>`;
   } else if (su.game === 'okey101') {
-    extra = `<section class="card"><h2>El sayısı</h2>
+    extra = `<section class="card"><h2>Oyun şekli</h2>
+      <div class="chips">${chip('Bireysel', !su.teams, 'data-act="su" data-k="teams" data-v="0"')}${chip('Eşli', su.teams, 'data-act="su" data-k="teams" data-v="1"')}</div>
+      ${su.teams ? '<p class="small">Karşılıklı oturanlar eştir: <b>1 ile 3</b> bir takım, <b>2 ile 4</b> bir takım. Oyuncuları oturma sırasıyla yaz.</p>' : ''}
+    </section>
+    <section class="card"><h2>El sayısı</h2>
       <div class="chips">${[3, 5, 7, 9, 11].map((n) => chip(String(n), su.handCount === n && !su.customCount, `data-act="su" data-k="handCount" data-v="${n}"`)).join('')}</div>
       <label class="inline">Başka: <input type="text" inputmode="numeric" class="short" data-sf="customCount" value="${esc(su.customCount)}" placeholder="—" aria-label="Özel el sayısı"></label>
       <h3>Masa</h3>
@@ -295,7 +304,7 @@ async function startMatch() {
   } else if (su.game === 'okey101') {
     const c = su.customCount ? parseIntStrict(su.customCount) : su.handCount;
     if (!Number.isInteger(c) || c < 1 || c > 50) { ui.error = 'El sayısı 1 ile 50 arasında olmalı.'; return render(); }
-    config = { handCount: c, penalized: su.penalized, lowWins: true };
+    config = { handCount: c, penalized: su.penalized, teams: !!su.teams, lowWins: true };
   } else config = { firstChooser: su.firstChooser };
 
   const cur = S.matches[S.active[su.game]];
@@ -339,7 +348,14 @@ function totalsStrip(m, extra = null) {
   const tot = matchTotals(m);
   const rk = ranking(tot, lowWins(m));
   const rankOf = Object.fromEntries(rk.map((r) => [r.player, r.rank]));
-  return `<div class="strip">${m.players.map((p, i) => `<div class="tcell ${rankOf[i] === 1 && m.hands.length ? 'lead' : ''}">
+  let teamRow = '';
+  if (isTeams(m)) {
+    const tt = matchTeamTotals(m); const tn = teamNames(m);
+    const trk = ranking(tt, true);
+    const tRank = Object.fromEntries(trk.map((r) => [r.player, r.rank]));
+    teamRow = `<div class="teams">${tt.map((t, k) => `<div class="tcell team t${k} ${tRank[k] === 1 && m.hands.length ? 'lead' : ''}"><span class="nm">${esc(tn[k])}</span>${pts(t)}</div>`).join('')}</div>`;
+  }
+  return `${teamRow}<div class="strip">${m.players.map((p, i) => `<div class="tcell ${rankOf[i] === 1 && m.hands.length ? 'lead' : ''}">
     <span class="nm">${esc(p.name)}</span>${pts(tot[i])}${extra ? `<span class="dl">${extra[i] === null ? '' : `→ ${pts(tot[i] + extra[i])}`}</span>` : ''}
     ${m.hands.length ? `<span class="rk">${rankOf[i]}.</span>` : ''}</div>`).join('')}</div>`;
 }
@@ -368,6 +384,7 @@ function okeyPlayBody(m) {
   return `<section class="card req"><p class="eyebrow">Açılış</p>
       <h2 class="big">En az 101 değerinde per veya en az 5 çift</h2>
       <p class="small">Açan oyuncu uygun perlere taş işleyebilir. Çift açan oyuncu bu profilde seri açamaz. Son taş atılarak bitilir.</p></section>
+    ${isTeams(m) ? `<section class="card"><p class="eyebrow">Eşli oyun</p><p>${esc(teamNames(m)[0])} ve ${esc(teamNames(m)[1])}. Biri bitirince eşi 0 yazar; rakip takımın iki oyuncusu ayrı ayrı hesaplanır. Takım toplamı düşük olan kazanır.</p></section>` : ''}
     <section class="card"><p class="eyebrow">Puanlama · ${m.config.penalized ? 'cezalı masa' : 'cezasız masa'}</p>${okeyTableGuide()}
       ${m.config.penalized ? '<p class="small">Kalan her gerçek okey +101 (çarpandan sonra). Ceza olayları +101, çarpılmaz.</p>' : ''}</section>`;
 }
@@ -474,11 +491,12 @@ function fields101(m, inp) {
       ${deste ? '<p class="small">Bitiren kaydı oluşmaz.</p>' : `<h3>Bitiren</h3>${playerChips(m, 'winner', inp.winner)}`}
       ${f && f.fixed ? `<p class="small">Elden: rakipler sabit ${f.fixed} yazar, açma alanları kapalı.</p>` : ''}
     </section>
-    <section class="card"><h3>${deste ? 'Oyuncular' : 'Rakipler'}</h3>
+    <section class="card"><h3>${deste ? 'Oyuncular' : isTeams(m) ? 'Eş ve rakipler' : 'Rakipler'}</h3>
     ${m.players.map((p, i) => {
     const pl = inp.players[i];
     const ev = pen ? `<label class="inline">Ceza olayı (+101) ${stepper(`players.${i}.events`, pl.events, `${p.name} ceza olayı`)}</label>` : '';
     if (!deste && inp.winner === i) return `<div class="pblock"><div class="nm">${esc(p.name)} <span class="badge">bitirdi</span> ${f ? pts(f.winner) : ''}</div>${ev}</div>`;
+    if (isTeams(m) && !deste && Number.isInteger(inp.winner) && i === partnerOf(inp.winner)) return `<div class="pblock"><div class="nm">${esc(p.name)} <span class="badge">eşi bitirdi</span> ${pts(0)}</div>${ev}</div>`;
     if (f && f.fixed) return `<div class="pblock"><div class="nm">${esc(p.name)} · sabit ${f.fixed}</div>${ev}</div>`;
     return `<div class="pblock"><div class="nm">${esc(p.name)}</div>
         <div class="chips">${chip('Açmadı', pl.state === 'acmadi', setAttrs(`players.${i}.state`, 'acmadi', 'str'))}${chip('Seri açtı', pl.state === 'seri', setAttrs(`players.${i}.state`, 'seri', 'str'))}${chip('Çift açtı', pl.state === 'cift', setAttrs(`players.${i}.state`, 'cift', 'str'))}</div>
@@ -569,7 +587,9 @@ function scoreTable(m, interactive = true) {
   }).join('');
   return `<div class="scroll"><table class="grid score"><thead><tr><th>${m.game === 'king' ? 'Kontrat' : 'El'}</th>${m.players.map((p) => `<th>${esc(p.name)}</th>`).join('')}</tr></thead>
     <tbody>${rows || '<tr><td colspan="5" class="small">Henüz kayıt yok.</td></tr>'}</tbody>
-    <tfoot><tr><th>Toplam</th>${tot.map((t) => `<td>${pts(t)}</td>`).join('')}</tr></tfoot></table></div>`;
+    <tfoot><tr><th>Toplam</th>${tot.map((t) => `<td>${pts(t)}</td>`).join('')}</tr>
+    ${isTeams(m) ? (() => { const tt = matchTeamTotals(m); const tn = teamNames(m); return tt.map((t, k) => `<tr class="teamrow"><th colspan="3">${esc(tn[k])}</th><td colspan="2">${pts(t)}</td></tr>`).join(''); })() : ''}
+    </tfoot></table></div>`;
 }
 
 function viewScore() {
@@ -598,6 +618,21 @@ function viewEnd() {
   const rk = ranking(tot, lowWins(m));
   const shared = rk.filter((r) => r.rank === 1).length > 1;
   S.view = { name: 'end', matchId: m.id };
+  if (isTeams(m)) {
+    const tn = teamNames(m);
+    const trk = ranking(matchTeamTotals(m), true);
+    const tShared = trk[0].rank === trk[1].rank;
+    return header(`${g.name} · Maç sonu`, 'Eşli · düşük takım toplamı kazanır') + `<main class="wrap">
+    <section class="card podium"><h2>${tShared ? 'Berabere' : `Kazanan: ${esc(tn[trk[0].player])}`}</h2>
+    <ol class="rank">${trk.map((r) => `<li class="r${r.rank}"><span class="place">${r.rank}.</span><span class="nm">${esc(tn[r.player])}</span>${pts(r.score)}</li>`).join('')}</ol>
+    <p class="small">Oyuncular: ${rk.map((r) => `${esc(m.players[r.player].name)} ${fmt(r.score)}`).join(' · ')}</p></section>
+    <section class="card"><h2>El dökümü</h2>${scoreTable(m)}</section>
+    <div class="dock">
+      <button type="button" class="btn primary big" data-act="new" data-game="${m.game}">Yeni maç</button>
+      <div class="row"><button type="button" class="btn ghost" data-act="undo">Son kaydı geri al</button>
+      <button type="button" class="btn ghost" data-act="home">Ana ekran</button></div>
+    </div></main>`;
+  }
   return header(`${g.name} · Maç sonu`, `${lowWins(m) ? 'Düşük' : 'Yüksek'} toplam kazanır`) + `<main class="wrap">
     <section class="card podium"><h2>${shared ? 'Ortak birincilik' : `Kazanan: ${esc(m.players[rk[0].player].name)}`}</h2>
     <ol class="rank">${rk.map((r) => `<li class="r${r.rank}"><span class="place">${r.rank}.</span><span class="nm">${esc(m.players[r.player].name)}</span>${pts(r.score)}</li>`).join('')}</ol>
@@ -697,7 +732,7 @@ const ACTIONS = {
   openMatch: (b) => go({ name: 'score', matchId: b.dataset.id, from: { name: 'historyList', game: S.matches[b.dataset.id].game } }),
   su: (b) => {
     const k = b.dataset.k; let v = b.dataset.v;
-    if (k === 'lowWins' || k === 'penalized') v = v === '1';
+    if (k === 'lowWins' || k === 'penalized' || k === 'teams') v = v === '1';
     if (k === 'handCount' || k === 'firstChooser') v = Number(v);
     S.setup[k] = v;
     if (k === 'handCount') S.setup.customCount = '';

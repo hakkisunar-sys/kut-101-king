@@ -90,6 +90,6 @@ export const KING_LIMITS = {
 
 export const GAMES = {
   kut: { id: 'kut', name: 'Küt Okey', sub: '13 el · ceza puanı, düşük kazanır' },
-  okey101: { id: 'okey101', name: '101 Okey', sub: 'Katlamasız bireysel · düşük kazanır' },
+  okey101: { id: 'okey101', name: '101 Okey', sub: 'Katlamasız · bireysel veya eşli · düşük kazanır' },
   king: { id: 'king', name: 'King', sub: '20 kontrat · yüksek kazanır' },
 };

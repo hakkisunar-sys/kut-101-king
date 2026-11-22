@@ -74,6 +74,17 @@ export const GUIDES = {
     },
     { title: 'Ceza tablosu', okeyTable: true },
     {
+      title: 'Eşli oyun',
+      items: [
+        'Karşılıklı oturan iki oyuncu eştir: 1 ile 3 bir takım, 2 ile 4 bir takım.',
+        'Her oyuncu kendi elini ayrı açar; eşinin açması seni açmış saymaz.',
+        'Biri bitirince kendi bitiş puanını alır (örn. normal bitişte −101), <b>eşi 0 yazar</b>; eşi açmamış olsa bile ceza almaz.',
+        'Rakip takımın iki oyuncusu tabloya göre ayrı ayrı hesaplanır.',
+        'Cezalı masada ceza olayları eşe de yazılır.',
+        'Maç sonunda eşlerin puanları toplanır; takım toplamı düşük olan kazanır.',
+      ],
+    },
+    {
       title: 'Cezalı masa',
       items: [
         'Seri veya çift açan rakibin T üzerinden çıkan puanına, elde kalan her gerçek okey için çarpandan sonra <b>+101</b> eklenir. Sabit hücreler değişmez.',
